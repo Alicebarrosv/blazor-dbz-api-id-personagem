@@ -1,0 +1,66 @@
+@page "/"
+@using System.Text.Json;
+@using BlazorDragonBallApi.Models;
+
+<PageTitle>Busque seu personagem</PageTitle>
+
+<h1>Consulta Personagem</h1>
+
+<div class="mb-3">
+    <label for="idInput" class="form-label">Digite o id do seu personagem:</label>
+    <input type="text" id="idInput" class="form-control" @bind="id" placeholder="Ex: 1" />
+</div>
+<button class="btn btn-primary" @onclick="ConsultarPersonagem">Consultar</button>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+else if (personagem != null)
+{
+    <h2 class="mt-4">Informações do Personagem</h2>
+    <p><strong>Nome:</strong> @personagem.Name</p>
+    <p><strong>Planeta de Origem:</strong> @(personagem.OriginPlanet?.Name ?? "Desconhecido")</p>
+
+    <h3>Transformações:</h3>
+    @if (personagem.Transformations != null && personagem.Transformations.Count > 0)
+    {
+        <ul>
+            @foreach (var t in personagem.Transformations)
+            {
+                <li>@t.Name</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Nenhuma transformação encontrada.</p>
+    }
+}
+
+@code {
+    private string id;
+    private Personagem personagem;
+    private string errorMessage;
+
+    private async Task ConsultarPersonagem()
+    {
+        try
+        {
+            var httpClient = new HttpClient();
+            var response = await httpClient
+                .GetAsync($"https://dragonball-api.com/api/characters/{id}");
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            personagem = JsonSerializer.Deserialize<Personagem>(jsonResponse, options);
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            personagem = null;
+            errorMessage = $"Erro ao consultar o personagem: {ex.Message}";
+        }
+    }
+}
